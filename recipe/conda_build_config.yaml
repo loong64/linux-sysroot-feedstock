@@ -1,18 +1,18 @@
 target_machine:
   - x86_64
   - aarch64
-  - powerpc64le
-  - s390x
+  - loongarch64
+  - riscv64
 centos_machine:
   - x86_64
   - aarch64
-  - ppc64le
-  - s390x
+  - loongarch64
+  - riscv64
 cross_target_platform:
   - linux-64
   - linux-aarch64
-  - linux-ppc64le
-  - linux-s390x
+  - linux-loongarch64
+  - linux-riscv64
 
 ctng_vendor:
   - conda

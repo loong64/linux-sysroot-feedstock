@@ -3,7 +3,7 @@ centos_machine:
 channel_sources:
 - conda-forge
 channel_targets:
-- conda-forge main
+- loong64 main
 cross_target_platform:
 - linux-aarch64
 ctng_vendor:

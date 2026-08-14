@@ -30,8 +30,8 @@ def _hash_it(url):
 machine_to_platform = {
     "x86_64": "linux-64",
     "aarch64": "linux-aarch64",
-    "ppc64le": "linux-ppc64le",
-    "s390x": "linux-s390x",
+    "loongarch64": "linux-loongarch64",
+    "riscv64": "linux-riscv64",
 }
 
 rpm_name = sys.argv[1]
@@ -50,8 +50,8 @@ rpm_tmpl = copy.copy(rpm_name)
 for centos_machine in [
     "x86_64",
     "aarch64",
-    "ppc64le",
-    "s390x",
+    "loongarch64",
+    "riscv64",
 ]:
     rpm_name = rpm_name.replace(centos_machine, "{centos_machine}")
 
@@ -59,15 +59,11 @@ for centos_machine in [
 centos_machine = "x86_64"
 for rpm_kind, base_url in [
     ("rpm_url", (
-        "https://repo.almalinux.org/almalinux/8/BaseOS/"
-        "{centos_machine}/os/Packages"
-    )),
-    ("appstream_rpm_url",  (
-        "https://repo.almalinux.org/almalinux/8/AppStream/"
+        "https://mirrors.openanolis.cn/anolis/23/os/"
         "{centos_machine}/os/Packages"
     )),
     ("powertools_rpm_url",  (
-        "https://repo.almalinux.org/almalinux/8/PowerTools/"
+        "https://mirrors.openanolis.cn/anolis/23/Devel/"
         "{centos_machine}/os/Packages"
     ))
 ]:
@@ -88,8 +84,8 @@ for rpm_kind, base_url in [
 for centos_machine in [
     "x86_64",
     "aarch64",
-    "ppc64le",
-    "s390x",
+    "loongarch64",
+    "riscv64",
 ]:
     rpm_tmpl = rpm_tmpl.replace(centos_machine, "{{ centos_machine }}")
 print("    url: {{ %s }}/%s" % (rpm_kind, rpm_tmpl))
@@ -98,8 +94,8 @@ print("    url: {{ %s }}/%s" % (rpm_kind, rpm_tmpl))
 for centos_machine in [
     "x86_64",
     "aarch64",
-    "ppc64le",
-    "s390x",
+    "loongarch64",
+    "riscv64",
 ]:
     url = os.path.join(
         base_url,

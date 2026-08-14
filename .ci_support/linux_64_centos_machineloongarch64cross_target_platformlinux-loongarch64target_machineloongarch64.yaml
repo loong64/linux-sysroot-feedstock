@@ -1,17 +1,17 @@
 centos_machine:
-- s390x
+- loongarch64
 channel_sources:
 - conda-forge
 channel_targets:
-- conda-forge main
+- loong64 main
 cross_target_platform:
-- linux-s390x
+- linux-loongarch64
 ctng_vendor:
 - conda
 docker_image:
 - quay.io/condaforge/linux-anvil-x86_64:alma9
 target_machine:
-- s390x
+- loongarch64
 with_features:
 - false
 - true

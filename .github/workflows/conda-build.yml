@@ -1,0 +1,89 @@
+name: conda-build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - config: linux_64_centos_machineaarch64cross_target_platformlinux-aarch64target_machineaarch64
+            short_config: linux_64_centos_machineaarch64cross_targ_ha557b6b8
+            docker_image: quay.io/condaforge/linux-anvil-x86_64:alma9
+          - config: linux_64_centos_machineloongarch64cross_target_platformlinux-loongarch64target_machineloongarch64
+            short_config: linux_64_centos_machineloongarch64cross_target_ha557b6b8
+            docker_image: quay.io/condaforge/linux-anvil-x86_64:alma9
+          - config: linux_64_centos_machineriscv64cross_target_platformlinux-riscv64target_machineriscv64
+            short_config: linux_64_centos_machineriscv64cross_target_h54b16e43
+            docker_image: quay.io/condaforge/linux-anvil-x86_64:alma9
+          - config: linux_64_centos_machinex86_64cross_target_platformlinux-64target_machinex86_64
+            short_config: linux_64_centos_machinex86_64cross_targe_h77f47944
+            docker_image: quay.io/condaforge/linux-anvil-x86_64:alma9
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Run docker build
+        env:
+          CONFIG: ${{ matrix.config }}
+          SHORT_CONFIG: ${{ matrix.short_config }}
+          DOCKER_IMAGE: ${{ matrix.docker_image }}
+          UPLOAD_PACKAGES: 'True'
+          BINSTAR_TOKEN: ${{ secrets.BINSTAR_TOKEN }}
+          FEEDSTOCK_TOKEN: ${{ secrets.FEEDSTOCK_TOKEN }}
+          STAGING_BINSTAR_TOKEN: ${{ secrets.STAGING_BINSTAR_TOKEN }}
+        run: |
+          export CI=github_actions
+          export flow_run_id=github_${{ github.run_id }}.${{ github.run_attempt }}
+          export remote_url=${{ github.server_url }}/${{ github.repository }}.git
+          export sha=${{ github.sha }}
+          export GIT_BRANCH=${GITHUB_REF_NAME}
+          export FEEDSTOCK_NAME=${GITHUB_REPOSITORY##*/}
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            export IS_PR_BUILD="True"
+          else
+            export IS_PR_BUILD="False"
+          fi
+          .scripts/run_docker_build.sh
+
+      - name: Prepare conda build artifacts
+        id: artifacts
+        if: always()
+        env:
+          CONFIG: ${{ matrix.config }}
+          SHORT_CONFIG: ${{ matrix.short_config }}
+        run: |
+          export CI=github_actions
+          export CI_RUN_ID=${{ github.run_id }}.${{ github.run_attempt }}
+          export FEEDSTOCK_NAME=${GITHUB_REPOSITORY##*/}
+          export CONDA_BLD_DIR=build_artifacts
+          export ARTIFACT_STAGING_DIR="${RUNNER_TEMP}"
+          export BLD_ARTIFACT_PREFIX=conda_artifacts
+          if [[ "${{ job.status }}" == "failure" ]]; then
+            export ENV_ARTIFACT_PREFIX=conda_envs
+          fi
+          ./.scripts/create_conda_build_artifacts.sh
+
+      - name: Store conda build artifacts
+        if: always() && steps.artifacts.outputs.BLD_ARTIFACT_PATH != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifacts.outputs.BLD_ARTIFACT_NAME }}
+          path: ${{ steps.artifacts.outputs.BLD_ARTIFACT_PATH }}
+
+      - name: Store conda build environment artifacts
+        if: always() && steps.artifacts.outputs.ENV_ARTIFACT_PATH != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifacts.outputs.ENV_ARTIFACT_NAME }}
+          path: ${{ steps.artifacts.outputs.ENV_ARTIFACT_PATH }}

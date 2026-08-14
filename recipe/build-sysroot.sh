@@ -3,8 +3,6 @@
 mkdir -p ${PREFIX}/${target_machine}-${ctng_vendor}-linux-gnu/sysroot
 pushd ${PREFIX}/${target_machine}-${ctng_vendor}-linux-gnu/sysroot > /dev/null 2>&1
 cp -Rf "${SRC_DIR}"/binary-glibc/* .
-mkdir -p usr/include
-cp -Rf "${SRC_DIR}"/binary-glibc-headers/include/* usr/include/
 cp -Rf "${SRC_DIR}"/binary-glibc-devel/* usr/
 cp -Rf "${SRC_DIR}"/binary-glibc-static/* usr/
 cp -Rf "${SRC_DIR}"/binary-glibc-common/* usr/
@@ -36,11 +34,6 @@ rm -f usr/include/rpcsvc/yppasswd.x
 rm -f usr/include/rpcsvc/yp_prot.h
 rm -f usr/include/rpcsvc/ypupd.h
 rm -f usr/include/rpcsvc/yp.x
-
-if [[ "$target_machine" == "s390x" ]]; then
-   rm -rf $PWD/lib64/ld64.so.1
-   ln -s $PWD/lib64/ld-* $PWD/lib64/ld64.so.1
-fi
 
 mkdir -p usr/share
 ln -sf ${PREFIX}/share/zoneinfo usr/share/zoneinfo

@@ -29,15 +29,12 @@ config = load(cbc_content, Loader=BaseLoader)
 rpm_arches = config["centos_machine"]
 conda_arches = config["cross_target_platform"]
 
-alma_version = "8.9"
+anolis_version = "23"
 
 url_template = (
-    f"https://repo.almalinux.org/vault/{alma_version}"
-    # second part intententionally not filled yet
+    f"https://mirrors.openanolis.cn/anolis/{anolis_version}"
     "/{subfolder}/{arch}/os/Packages"
 )
-
-el_ver = "el" + alma_version.replace(".", "_")
 
 # determine version of glibc & kernel-headers
 
@@ -54,7 +51,7 @@ el_ver = "el" + alma_version.replace(".", "_")
 # </pre><hr></body>
 # </html>
 # ```
-baseos_frontpage = url_template.format(subfolder="BaseOS", arch="x86_64")
+baseos_frontpage = url_template.format(subfolder="os", arch="x86_64")
 logging.info(f"Fetching content of {baseos_frontpage}")
 baseos_pkgs_html = requests.get(baseos_frontpage).content.decode("utf-8")
 
@@ -75,22 +72,16 @@ for line in baseos_pkgs_html.splitlines():
     line = line[len("<a href=\""):]
     url = line[:line.index("\">")]
 
-    if el_ver not in url:
-        continue
-
     if not url.endswith("x86_64.rpm"):
         continue
 
-    name, version, build = url.rsplit("-", 2)
-    # glibc-2.28-236.el8.7.x86_64.rpm
+    name, version, build = url.removesuffix(".x86_64.rpm").rsplit("-", 2)
     if name == "glibc":
-        glibc_build1 = max(glibc_build1, int(build.split(".")[0]))
-        glibc_build2 = max(glibc_build2, int(build.split(".")[2]))
+        glibc_build1 = build
         glibc_version = version
 
-    # kernel-headers-4.18.0-513.24.1.el8_9.x86_64.rpm
     if name == "kernel-headers":
-        kernel_headers_build = max(kernel_headers_build, Version(build.rsplit(".", 3)[0]))
+        kernel_headers_build = build
         kernel_headers_version = version
 
 if glibc_version == 0:
@@ -98,8 +89,9 @@ if glibc_version == 0:
 if kernel_headers_version == 0:
     raise ValueError("could not determine kernel-headers version!")
 
-glibc_string = f"{glibc_version}-{glibc_build1}.{el_ver}.{glibc_build2}"
-kernel_headers_string = f"{kernel_headers_version}-{kernel_headers_build}.{el_ver}"
+glibc_string = f"{glibc_version}-{glibc_build1}"
+kernel_headers_string = f"{kernel_headers_version}-{kernel_headers_build}"
+kernel_headers_version = ".".join(kernel_headers_version.split(".")[:2])
 
 logging.info(f"Determined {glibc_string=}")
 logging.info(f"Determined {kernel_headers_string=}")
@@ -113,7 +105,6 @@ name2string = {
     "glibc-common": glibc_string,
     "glibc-devel": glibc_string,
     "glibc-gconv-extra": glibc_string,
-    "glibc-headers": glibc_string,
     "glibc-static": glibc_string,
     "kernel-headers": kernel_headers_string,
 }
@@ -122,7 +113,7 @@ def get_subfolder(pkg, string):
     # find in which subfolder the rpm lives on the alma vault;
     # we assume that the layout for x86_64 works for all arches
     pkg_template = url_template + f"/{pkg}-{string}.x86_64.rpm"
-    for sf in ["BaseOS", "PowerTools", "AppStream"]:
+    for sf in ["os", "Devel"]:
         url = pkg_template.format(arch="x86_64", subfolder=sf)
         logging.info(f"Testing if {url} exists")
         if requests.get(url).status_code == 200:
@@ -133,8 +124,8 @@ for pkg, string in name2string.items():
     out_lines.append(f"  - folder: binary-{pkg}")
     subfolder = get_subfolder(pkg, string)
     url_jinja = (
-        "{{ rpm_url }}" if subfolder == "BaseOS" else
-        "{{ powertools_rpm_url }}" if subfolder == "PowerTools" else
+        "{{ rpm_url }}" if subfolder == "os" else
+        "{{ powertools_rpm_url }}" if subfolder == "Devel" else
         "{{ appstream_rpm_url }}"
     )
     # quadruple curly braces to keep {{ }} jinja templates
@@ -161,8 +152,8 @@ with open("meta.yaml") as f:
 
 skip = False
 for line in old_meta:
-    if line.startswith("{% set alma_version"):
-        line = f'{{% set alma_version = "{alma_version}" %}}'
+    if line.startswith("{% set anolis_version"):
+        line = f'{{% set anolis_version = "{anolis_version}" %}}'
     elif line.startswith("{% set glibc_version"):
         line = f'{{% set glibc_version = "{glibc_version}" %}}'
     elif line.startswith("{% set kernel_headers_version"):
